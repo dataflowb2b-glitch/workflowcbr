@@ -2,157 +2,57 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Meus Envios</title>
-
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <style>
-        body {
-            background-color: #f8f9fa;
-        }
-
-        h3 {
-            font-weight: 600;
-        }
-
-        .card-envio {
-            border-radius: 14px;
-            border: none;
-        }
-
-        .btn {
-            border-radius: 10px;
-        }
-
-        .envio-label {
-            font-size: 13px;
-            color: #6c757d;
-        }
-
-        .envio-value {
-            font-weight: 500;
-        }
-    </style>
 </head>
-
 <body>
+<div class="container mt-5">
+    <h3>Meus Envios</h3>
 
-<div class="container mt-4 mb-5">
+    <table class="table table-bordered table-striped mt-4">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Cliente</th>
+                <th>Número NF</th>
+                <th>Foto Canhoto</th>
+                <th>Teve Devolução</th>
+                <th>Tipo Devolução</th> <!-- NOVO -->
+                <th>Foto Devolução</th>
+                <th>Teve Descarga</th>
+                <th>Foto Descarga</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for envio in envios %}
+                <tr>
+                    <td>{{ envio.id }}</td>
+                    <td>{{ envio.cliente }}</td>
+                    <td>{{ envio.numero_nf }}</td>
+                    <td>
+                        {% if envio.foto_canhoto %}
+                            <a href="{{ envio.foto_canhoto }}" target="_blank">Ver Foto</a>
+                        {% endif %}
+                    </td>
+                    <td>{{ envio.teve_devolucao }}</td>
+                    <td>{{ envio.tipo_devolucao or "-" }}</td> <!-- NOVO -->
+                    <td>
+                        {% if envio.foto_devolucao %}
+                            <a href="{{ envio.foto_devolucao }}" target="_blank">Ver Foto</a>
+                        {% endif %}
+                    </td>
+                    <td>{{ envio.teve_descarga }}</td>
+                    <td>
+                        {% if envio.foto_descarga %}
+                            <a href="{{ envio.foto_descarga }}" target="_blank">Ver Foto</a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3>Meus Envios</h3>
-        <a href="{{ url_for('novo_envio') }}" class="btn btn-success btn-sm">
-            + Novo
-        </a>
-    </div>
-
-    <!-- ================= DESKTOP TABLE ================= -->
-    <div class="d-none d-md-block">
-        <div class="card p-3 shadow-sm">
-            <div class="table-responsive">
-                <table class="table table-striped align-middle">
-
-                    <thead class="table-light">
-                        <tr>
-                            <th>ID</th>
-                            <th>Cliente</th>
-                            <th>NF</th>
-                            <th>Canhoto</th>
-                            <th>Devolução</th>
-                            <th>Descarga</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {% for envio in envios %}
-                        <tr>
-                            <td>{{ envio.id }}</td>
-                            <td>{{ envio.cliente }}</td>
-                            <td>{{ envio.numero_nf }}</td>
-
-                            <td>
-                                {% if envio.foto_canhoto %}
-                                    <a href="{{ envio.foto_canhoto }}" target="_blank"
-                                       class="btn btn-sm btn-primary">Ver</a>
-                                {% else %}-{% endif %}
-                            </td>
-
-                            <td>
-                                {% if envio.foto_devolucao %}
-                                    <a href="{{ envio.foto_devolucao }}" target="_blank"
-                                       class="btn btn-sm btn-warning">Ver</a>
-                                {% else %}-{% endif %}
-                            </td>
-
-                            <td>
-                                {% if envio.foto_descarga %}
-                                    <a href="{{ envio.foto_descarga }}" target="_blank"
-                                       class="btn btn-sm btn-info">Ver</a>
-                                {% else %}-{% endif %}
-                            </td>
-
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- ================= MOBILE CARDS ================= -->
-    <div class="d-md-none">
-
-        {% for envio in envios %}
-        <div class="card card-envio shadow-sm mb-3 p-3">
-
-            <div class="mb-2">
-                <div class="envio-label">ID</div>
-                <div class="envio-value">#{{ envio.id }}</div>
-            </div>
-
-            <div class="mb-2">
-                <div class="envio-label">Cliente</div>
-                <div class="envio-value">{{ envio.cliente }}</div>
-            </div>
-
-            <div class="mb-3">
-                <div class="envio-label">NF</div>
-                <div class="envio-value">{{ envio.numero_nf }}</div>
-            </div>
-
-            <div class="d-grid gap-2">
-
-                {% if envio.foto_canhoto %}
-                <a href="{{ envio.foto_canhoto }}" target="_blank"
-                   class="btn btn-primary btn-sm">📄 Ver Canhoto</a>
-                {% endif %}
-
-                {% if envio.foto_devolucao %}
-                <a href="{{ envio.foto_devolucao }}" target="_blank"
-                   class="btn btn-warning btn-sm">↩ Ver Devolução</a>
-                {% endif %}
-
-                {% if envio.foto_descarga %}
-                <a href="{{ envio.foto_descarga }}" target="_blank"
-                   class="btn btn-info btn-sm">📦 Ver Descarga</a>
-                {% endif %}
-
-            </div>
-
-        </div>
-        {% endfor %}
-
-    </div>
-
-    <div class="text-center mt-4">
-        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm">
-            Sair
-        </a>
-    </div>
-
+    <a href="{{ url_for('novo_envio') }}" class="btn btn-primary mt-3">Novo Envio</a>
 </div>
-
 </body>
 </html>
