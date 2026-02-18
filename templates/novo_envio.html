@@ -39,6 +39,15 @@
             </select>
         </div>
 
+        <!-- Tipo de Devolução -->
+        <div class="mb-3" id="tipo_devolucao_container" style="display:none;">
+            <label>Tipo de Devolução</label>
+            <select class="form-select" name="tipo_devolucao" id="tipo_devolucao_select">
+                <option value="Falta">Falta</option>
+                <option value="Avaria">Avaria</option>
+            </select>
+        </div>
+
         <!-- Foto Devolução -->
         <div class="mb-3" id="foto_devolucao_container" style="display:none;">
             <label>Foto da Devolução</label>
@@ -77,35 +86,34 @@
 
 <script>
     const devolucaoSelect = document.getElementById('teve_devolucao_select');
-    const descargaSelect = document.getElementById('teve_descarga_select');
-
     const devolucaoContainer = document.getElementById('foto_devolucao_container');
-    const descargaContainer = document.getElementById('foto_descarga_container');
-
+    const tipoDevolucaoContainer = document.getElementById('tipo_devolucao_container');
     const inputDevolucao = document.getElementById('foto_devolucao_input');
+
+    const descargaSelect = document.getElementById('teve_descarga_select');
+    const descargaContainer = document.getElementById('foto_descarga_container');
     const inputDescarga = document.getElementById('foto_descarga_input');
 
     // ==========================
     // DEVOLUÇÃO
     // ==========================
     devolucaoSelect.addEventListener('change', function() {
-
         if (this.value === 'Sim') {
+            tipoDevolucaoContainer.style.display = 'block';
             devolucaoContainer.style.display = 'block';
             inputDevolucao.required = true;
         } else {
+            tipoDevolucaoContainer.style.display = 'none';
             devolucaoContainer.style.display = 'none';
             inputDevolucao.required = false;
             inputDevolucao.value = "";
         }
-
     });
 
     // ==========================
     // DESCARGA
     // ==========================
     descargaSelect.addEventListener('change', function() {
-
         if (this.value === 'Sim') {
             descargaContainer.style.display = 'block';
             inputDescarga.required = true;
@@ -114,7 +122,6 @@
             inputDescarga.required = false;
             inputDescarga.value = "";
         }
-
     });
 </script>
 
