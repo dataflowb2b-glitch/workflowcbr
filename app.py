@@ -1,136 +1,204 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+import os
+import uuid
+from flask import Flask, render_template, request, redirect, url_for
+from flask_sqlalchemy import SQLAlchemy
 from supabase import create_client
 from werkzeug.utils import secure_filename
-import uuid
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 
+# ==============================
+# FLASK INIT
+# ==============================
 app = Flask(__name__)
-app.secret_key = "supersecretkey"
+
+app.secret_key = os.getenv("SECRET_KEY", "fallback-secret")
 
 # ==============================
-# CONFIG SUPABASE
+# DATABASE CONFIG (OBRIGA SSL)
 # ==============================
-SUPABASE_URL = "https://qoohwyaajiapqyjvotms.supabase.co"
-SUPABASE_KEY = "SUA_SERVICE_ROLE_KEY_AQUI"
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise Exception("DATABASE_URL não configurada!")
+
+if "sslmode" not in DATABASE_URL:
+    DATABASE_URL += "?sslmode=require"
+
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+db = SQLAlchemy(app)
+
+# ==============================
+# LOGIN CONFIG
+# ==============================
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "login"
+
+# ==============================
+# SUPABASE CONFIG
+# ==============================
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise Exception("SUPABASE não configurado!")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ==============================
+# MODELS
+# ==============================
+class Usuario(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100), unique=True)
+    password = db.Column(db.String(200))
+
+class Envio(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    motorista = db.Column(db.String(100))
+    cliente = db.Column(db.String(100))
+    numero_nf = db.Column(db.String(100))
+    foto_canhoto = db.Column(db.String(300))
+    teve_devolucao = db.Column(db.String(10))
+    foto_devolucao = db.Column(db.String(300))
+    teve_descarga = db.Column(db.String(10))
+    foto_descarga = db.Column(db.String(300))
+
+# ==============================
+# CREATE TABLES (IMPORTANTE)
+# ==============================
+with app.app_context():
+    db.create_all()
+
+# ==============================
+# USER LOADER
+# ==============================
+@login_manager.user_loader
+def load_user(user_id):
+    return db.session.get(Usuario, int(user_id))
+
+# ==============================
+# HOME
+# ==============================
+@app.route("/")
+def home():
+    if current_user.is_authenticated:
+        if current_user.username == "admin":
+            return redirect(url_for("admin_dashboard"))
+        return redirect(url_for("meus_envios"))
+    return redirect(url_for("login"))
+
+# ==============================
 # LOGIN
 # ==============================
-@app.route("/", methods=["GET", "POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        usuario = request.form.get("usuario")
-        senha = request.form.get("senha")
+        username = request.form["username"]
+        password = request.form["password"]
 
-        response = supabase.table("motoristas") \
-            .select("*") \
-            .eq("usuario", usuario) \
-            .eq("senha", senha) \
-            .execute()
+        user = Usuario.query.filter_by(username=username).first()
 
-        if response.data:
-            session["usuario"] = usuario
-            session["motorista_id"] = response.data[0]["id"]
-            session["is_admin"] = usuario == "admin"
+        if user and check_password_hash(user.password, password):
+            login_user(user)
 
-            if session["is_admin"]:
-                return redirect(url_for("admin"))
+            if username == "admin":
+                return redirect(url_for("admin_dashboard"))
             return redirect(url_for("meus_envios"))
+
+        return "Usuário ou senha inválidos"
 
     return render_template("login.html")
 
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for("login"))
 
 # ==============================
-# NOVO ENVIO
+# ADMIN
 # ==============================
-@app.route("/novo_envio", methods=["GET", "POST"])
-def novo_envio():
+@app.route("/admin")
+@login_required
+def admin_dashboard():
+    if current_user.username != "admin":
+        return redirect(url_for("meus_envios"))
 
-    if "usuario" not in session:
-        return redirect(url_for("login"))
+    motoristas = Usuario.query.all()
+    envios = Envio.query.all()
+    return render_template("dashboard_admin.html", motoristas=motoristas, envios=envios)
+
+@app.route("/cadastrar_motorista", methods=["GET", "POST"])
+@login_required
+def cadastrar_motorista():
+    if current_user.username != "admin":
+        return redirect(url_for("meus_envios"))
 
     if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
 
-        cliente = request.form.get("cliente")
-        numero_nf = request.form.get("numero_nf")
-        teve_devolucao = request.form.get("teve_devolucao")
-        teve_descarga = request.form.get("teve_descarga")
+        if Usuario.query.filter_by(username=username).first():
+            return "Motorista já existe!"
 
-        # VALIDAÇÃO BACKEND
-        if teve_devolucao == "Sim" and not request.files.get("foto_devolucao"):
-            return "Erro: Foto da devolução é obrigatória.", 400
+        novo_motorista = Usuario(
+            username=username,
+            password=generate_password_hash(password)
+        )
 
-        if teve_descarga == "Sim" and not request.files.get("foto_descarga"):
-            return "Erro: Foto da descarga é obrigatória.", 400
+        db.session.add(novo_motorista)
+        db.session.commit()
 
-        url_canhoto = None
-        url_devolucao = None
-        url_descarga = None
+        return redirect(url_for("admin_dashboard"))
 
-        # ==========================
-        # CANHOTO
-        # ==========================
-        foto_canhoto = request.files.get("foto_canhoto")
+    return render_template("cadastrar_motorista.html")
 
-        if foto_canhoto and foto_canhoto.filename != "":
-            nome = f"{uuid.uuid4()}_{secure_filename(foto_canhoto.filename)}"
+# ==============================
+# MOTORISTA
+# ==============================
+@app.route("/meus_envios")
+@login_required
+def meus_envios():
+    envios = Envio.query.filter_by(motorista=current_user.username).all()
+    return render_template("meus_envios.html", envios=envios)
 
-            supabase.storage.from_("entregas").upload(
-                nome,
-                foto_canhoto.read(),
-                {"content-type": foto_canhoto.content_type}
-            )
+@app.route("/novo_envio", methods=["GET", "POST"])
+@login_required
+def novo_envio():
+    if request.method == "POST":
+        motorista = current_user.username
+        cliente = request.form["cliente"]
+        numero_nf = request.form["numero_nf"]
+        teve_devolucao = request.form["teve_devolucao"]
+        teve_descarga = request.form["teve_descarga"]
 
-            url_canhoto = supabase.storage.from_("entregas").get_public_url(nome)
+        # FOTO CANHOTO
+        foto_canhoto = request.files["foto_canhoto"]
+        nome_canhoto = f"{uuid.uuid4()}_{secure_filename(foto_canhoto.filename)}"
 
-        # ==========================
-        # DEVOLUÇÃO
-        # ==========================
-        if teve_devolucao == "Sim":
-            foto_devolucao = request.files.get("foto_devolucao")
+        supabase.storage.from_("entregas").upload(
+            nome_canhoto,
+            foto_canhoto.read(),
+            {"content-type": foto_canhoto.content_type}
+        )
 
-            if foto_devolucao and foto_devolucao.filename != "":
-                nome_dev = f"{uuid.uuid4()}_{secure_filename(foto_devolucao.filename)}"
+        url_canhoto = supabase.storage.from_("entregas").get_public_url(nome_canhoto)
 
-                supabase.storage.from_("entregas").upload(
-                    nome_dev,
-                    foto_devolucao.read(),
-                    {"content-type": foto_devolucao.content_type}
-                )
+        envio = Envio(
+            motorista=motorista,
+            cliente=cliente,
+            numero_nf=numero_nf,
+            foto_canhoto=url_canhoto,
+            teve_devolucao=teve_devolucao,
+            teve_descarga=teve_descarga
+        )
 
-                url_devolucao = supabase.storage.from_("entregas").get_public_url(nome_dev)
-
-        # ==========================
-        # DESCARGA
-        # ==========================
-        if teve_descarga == "Sim":
-            foto_descarga = request.files.get("foto_descarga")
-
-            if foto_descarga and foto_descarga.filename != "":
-                nome_desc = f"{uuid.uuid4()}_{secure_filename(foto_descarga.filename)}"
-
-                supabase.storage.from_("entregas").upload(
-                    nome_desc,
-                    foto_descarga.read(),
-                    {"content-type": foto_descarga.content_type}
-                )
-
-                url_descarga = supabase.storage.from_("entregas").get_public_url(nome_desc)
-
-        # ==========================
-        # SALVAR NO BANCO
-        # ==========================
-        supabase.table("envios").insert({
-            "motorista_id": session["motorista_id"],
-            "cliente": cliente,
-            "numero_nf": numero_nf,
-            "canhoto_url": url_canhoto,
-            "teve_devolucao": teve_devolucao,
-            "foto_devolucao_url": url_devolucao,
-            "teve_descarga": teve_descarga,
-            "foto_descarga_url": url_descarga
-        }).execute()
+        db.session.add(envio)
+        db.session.commit()
 
         return redirect(url_for("meus_envios"))
 
@@ -138,49 +206,7 @@ def novo_envio():
 
 
 # ==============================
-# MEUS ENVIOS
+# START (RENDER)
 # ==============================
-@app.route("/meus_envios")
-def meus_envios():
-
-    if "usuario" not in session:
-        return redirect(url_for("login"))
-
-    response = supabase.table("envios") \
-        .select("*") \
-        .eq("motorista_id", session["motorista_id"]) \
-        .execute()
-
-    return render_template("meus_envios.html", envios=response.data)
-
-
-# ==============================
-# ADMIN
-# ==============================
-@app.route("/admin")
-def admin():
-
-    if not session.get("is_admin"):
-        return redirect(url_for("login"))
-
-    motoristas = supabase.table("motoristas").select("*").execute()
-    envios = supabase.table("envios").select("*").execute()
-
-    return render_template(
-        "admin.html",
-        motoristas=motoristas.data,
-        envios=envios.data
-    )
-
-
-# ==============================
-# LOGOUT
-# ==============================
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for("login"))
-
-
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
