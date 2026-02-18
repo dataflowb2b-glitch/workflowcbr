@@ -60,6 +60,7 @@ class Envio(db.Model):
     numero_nf = db.Column(db.String(100))
     foto_canhoto = db.Column(db.String(300))
     teve_devolucao = db.Column(db.String(10))
+    tipo_devolucao = db.Column(db.String(20))
     foto_devolucao = db.Column(db.String(300))
     teve_descarga = db.Column(db.String(10))
     foto_descarga = db.Column(db.String(300))
@@ -150,6 +151,7 @@ def novo_envio():
         cliente = request.form["cliente"]
         numero_nf = request.form["numero_nf"]
         teve_devolucao = request.form["teve_devolucao"]
+        tipo_devolucao = request.form.get("tipo_devolucao")  # pega a nova info
         teve_descarga = request.form["teve_descarga"]
 
         # FOTO CANHOTO
@@ -183,15 +185,19 @@ def novo_envio():
             numero_nf=numero_nf,
             foto_canhoto=url_canhoto,
             teve_devolucao=teve_devolucao,
+            tipo_devolucao=tipo_devolucao,  # salva no banco
             foto_devolucao=url_devolucao,
             teve_descarga=teve_descarga,
             foto_descarga=url_descarga
         )
+
         db.session.add(envio)
         db.session.commit()
+
         return redirect(url_for("meus_envios"))
 
     return render_template("novo_envio.html")
+
 
 # ==============================
 # START APP
