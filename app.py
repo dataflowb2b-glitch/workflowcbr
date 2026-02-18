@@ -160,15 +160,16 @@ def cadastrar_motorista():
 # ==============================
 # MOTORISTA
 # ==============================
+@app.route("/meus_envios")
+@login_required
+def meus_envios():
+    envios = Envio.query.filter_by(motorista=current_user.username).all()
+    return render_template("meus_envios.html", envios=envios)
+
 @app.route("/novo_envio", methods=["GET", "POST"])
 @login_required
 def novo_envio():
-
     if request.method == "POST":
-
-        print("FORM:", request.form)
-        print("FILES:", request.files)
-
         motorista = current_user.username
         cliente = request.form["cliente"]
         numero_nf = request.form["numero_nf"]
@@ -176,13 +177,9 @@ def novo_envio():
         teve_descarga = request.form["teve_descarga"]
 
         # ==========================
-        # FOTO CANHOTO
+        # FOTO CANHOTO (já funciona)
         # ==========================
         foto_canhoto = request.files["foto_canhoto"]
-
-        if not foto_canhoto or foto_canhoto.filename == "":
-            return "Foto do canhoto é obrigatória!"
-
         nome_canhoto = f"{uuid.uuid4()}_{secure_filename(foto_canhoto.filename)}"
 
         supabase.storage.from_("entregas").upload(
@@ -194,46 +191,42 @@ def novo_envio():
         url_canhoto = supabase.storage.from_("entregas").get_public_url(nome_canhoto)
 
         # ==========================
-        # FOTO DEVOLUÇÃO
+        # FOTO DEVOLUÇÃO (NOVO)
         # ==========================
         url_devolucao = None
 
         if teve_devolucao == "Sim":
             foto_devolucao = request.files.get("foto_devolucao")
 
-            if not foto_devolucao or foto_devolucao.filename == "":
-                return "Foto da devolução é obrigatória quando marcar SIM!"
+            if foto_devolucao and foto_devolucao.filename != "":
+                nome_dev = f"{uuid.uuid4()}_{secure_filename(foto_devolucao.filename)}"
 
-            nome_dev = f"{uuid.uuid4()}_{secure_filename(foto_devolucao.filename)}"
+                supabase.storage.from_("entregas").upload(
+                    nome_dev,
+                    foto_devolucao.read(),
+                    {"content-type": foto_devolucao.content_type}
+                )
 
-            supabase.storage.from_("entregas").upload(
-                nome_dev,
-                foto_devolucao.read(),
-                {"content-type": foto_devolucao.content_type}
-            )
-
-            url_devolucao = supabase.storage.from_("entregas").get_public_url(nome_dev)
+                url_devolucao = supabase.storage.from_("entregas").get_public_url(nome_dev)
 
         # ==========================
-        # FOTO DESCARGA
+        # FOTO DESCARGA (NOVO)
         # ==========================
         url_descarga = None
 
         if teve_descarga == "Sim":
             foto_descarga = request.files.get("foto_descarga")
 
-            if not foto_descarga or foto_descarga.filename == "":
-                return "Foto da descarga é obrigatória quando marcar SIM!"
+            if foto_descarga and foto_descarga.filename != "":
+                nome_desc = f"{uuid.uuid4()}_{secure_filename(foto_descarga.filename)}"
 
-            nome_desc = f"{uuid.uuid4()}_{secure_filename(foto_descarga.filename)}"
+                supabase.storage.from_("entregas").upload(
+                    nome_desc,
+                    foto_descarga.read(),
+                    {"content-type": foto_descarga.content_type}
+                )
 
-            supabase.storage.from_("entregas").upload(
-                nome_desc,
-                foto_descarga.read(),
-                {"content-type": foto_descarga.content_type}
-            )
-
-            url_descarga = supabase.storage.from_("entregas").get_public_url(nome_desc)
+                url_descarga = supabase.storage.from_("entregas").get_public_url(nome_desc)
 
         # ==========================
         # SALVAR NO BANCO
