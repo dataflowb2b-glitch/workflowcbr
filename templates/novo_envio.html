@@ -8,7 +8,9 @@
 <body>
 <div class="container mt-5">
     <h3>Novo Envio</h3>
+
     <form method="POST" action="{{ url_for('novo_envio') }}" enctype="multipart/form-data">
+
         <!-- Cliente -->
         <div class="mb-3">
             <label>Cliente</label>
@@ -24,7 +26,8 @@
         <!-- Foto NF / Canhoto -->
         <div class="mb-3">
             <label>Foto do Canhoto / NF</label>
-            <input type="file" class="form-control" name="foto_canhoto" accept="image/*" capture="environment" required>
+            <input type="file" class="form-control" name="foto_canhoto"
+                   accept="image/*" capture="environment" required>
         </div>
 
         <!-- Teve Devolução? -->
@@ -36,10 +39,14 @@
             </select>
         </div>
 
-        <!-- Foto Devolução (aparece abaixo se houver) -->
+        <!-- Foto Devolução -->
         <div class="mb-3" id="foto_devolucao_container" style="display:none;">
             <label>Foto da Devolução</label>
-            <input type="file" class="form-control" name="foto_devolucao" accept="image/*" capture="environment">
+            <input type="file" class="form-control"
+                   name="foto_devolucao"
+                   id="foto_devolucao_input"
+                   accept="image/*"
+                   capture="environment">
         </div>
 
         <!-- Teve Descarga? -->
@@ -51,30 +58,65 @@
             </select>
         </div>
 
-        <!-- Foto Descarga (aparece abaixo se houver) -->
+        <!-- Foto Descarga -->
         <div class="mb-3" id="foto_descarga_container" style="display:none;">
             <label>Foto da Descarga</label>
-            <input type="file" class="form-control" name="foto_descarga" accept="image/*" capture="environment">
+            <input type="file"
+                   class="form-control"
+                   name="foto_descarga"
+                   id="foto_descarga_input"
+                   accept="image/*"
+                   capture="environment">
         </div>
 
         <button type="submit" class="btn btn-primary">Enviar</button>
         <a href="{{ url_for('meus_envios') }}" class="btn btn-secondary">Voltar</a>
+
     </form>
 </div>
 
 <script>
     const devolucaoSelect = document.getElementById('teve_devolucao_select');
     const descargaSelect = document.getElementById('teve_descarga_select');
+
     const devolucaoContainer = document.getElementById('foto_devolucao_container');
     const descargaContainer = document.getElementById('foto_descarga_container');
 
-    devolucaoSelect.addEventListener('change', () => {
-        devolucaoContainer.style.display = devolucaoSelect.value === 'Sim' ? 'block' : 'none';
+    const inputDevolucao = document.getElementById('foto_devolucao_input');
+    const inputDescarga = document.getElementById('foto_descarga_input');
+
+    // ==========================
+    // DEVOLUÇÃO
+    // ==========================
+    devolucaoSelect.addEventListener('change', function() {
+
+        if (this.value === 'Sim') {
+            devolucaoContainer.style.display = 'block';
+            inputDevolucao.required = true;
+        } else {
+            devolucaoContainer.style.display = 'none';
+            inputDevolucao.required = false;
+            inputDevolucao.value = "";
+        }
+
     });
 
-    descargaSelect.addEventListener('change', () => {
-        descargaContainer.style.display = descargaSelect.value === 'Sim' ? 'block' : 'none';
+    // ==========================
+    // DESCARGA
+    // ==========================
+    descargaSelect.addEventListener('change', function() {
+
+        if (this.value === 'Sim') {
+            descargaContainer.style.display = 'block';
+            inputDescarga.required = true;
+        } else {
+            descargaContainer.style.display = 'none';
+            inputDescarga.required = false;
+            inputDescarga.value = "";
+        }
+
     });
 </script>
+
 </body>
 </html>
