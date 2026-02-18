@@ -176,7 +176,9 @@ def novo_envio():
         teve_devolucao = request.form["teve_devolucao"]
         teve_descarga = request.form["teve_descarga"]
 
-        # FOTO CANHOTO
+        # ==========================
+        # FOTO CANHOTO (já funciona)
+        # ==========================
         foto_canhoto = request.files["foto_canhoto"]
         nome_canhoto = f"{uuid.uuid4()}_{secure_filename(foto_canhoto.filename)}"
 
@@ -188,13 +190,56 @@ def novo_envio():
 
         url_canhoto = supabase.storage.from_("entregas").get_public_url(nome_canhoto)
 
+        # ==========================
+        # FOTO DEVOLUÇÃO (NOVO)
+        # ==========================
+        url_devolucao = None
+
+        if teve_devolucao == "Sim":
+            foto_devolucao = request.files.get("foto_devolucao")
+
+            if foto_devolucao and foto_devolucao.filename != "":
+                nome_dev = f"{uuid.uuid4()}_{secure_filename(foto_devolucao.filename)}"
+
+                supabase.storage.from_("entregas").upload(
+                    nome_dev,
+                    foto_devolucao.read(),
+                    {"content-type": foto_devolucao.content_type}
+                )
+
+                url_devolucao = supabase.storage.from_("entregas").get_public_url(nome_dev)
+
+        # ==========================
+        # FOTO DESCARGA (NOVO)
+        # ==========================
+        url_descarga = None
+
+        if teve_descarga == "Sim":
+            foto_descarga = request.files.get("foto_descarga")
+
+            if foto_descarga and foto_descarga.filename != "":
+                nome_desc = f"{uuid.uuid4()}_{secure_filename(foto_descarga.filename)}"
+
+                supabase.storage.from_("entregas").upload(
+                    nome_desc,
+                    foto_descarga.read(),
+                    {"content-type": foto_descarga.content_type}
+                )
+
+                url_descarga = supabase.storage.from_("entregas").get_public_url(nome_desc)
+
+        # ==========================
+        # SALVAR NO BANCO
+        # ==========================
         envio = Envio(
             motorista=motorista,
             cliente=cliente,
             numero_nf=numero_nf,
             foto_canhoto=url_canhoto,
             teve_devolucao=teve_devolucao,
-            teve_descarga=teve_descarga
+            foto_devolucao=url_devolucao,
+            teve_descarga=teve_descarga,
+            foto_descarga=url_descarga
         )
 
         db.session.add(envio)
@@ -203,6 +248,7 @@ def novo_envio():
         return redirect(url_for("meus_envios"))
 
     return render_template("novo_envio.html")
+
 
 
 # ==============================
