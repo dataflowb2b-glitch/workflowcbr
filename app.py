@@ -17,7 +17,7 @@ load_dotenv()
 # FLASK INIT
 # ==============================
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "super_secret_key")
+app.secret_key = os.getenv("SECRET_KEY")
 
 # ==============================
 # LOGIN CONFIG
@@ -29,20 +29,17 @@ login_manager.login_view = "login"
 # ==============================
 # SUPABASE CONFIG
 # ==============================
-SUPABASE_URL = os.getenv("SUPABASE_URL", "https://qoohwyaajiapqyjvotms.supabase.co")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "sb_publishable_SD5nlCcBenrdnftETZZ7JQ_3QlLizf_")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ==============================
 # DATABASE CONFIG
 # ==============================
-DB_PASSWORD = os.getenv("DB_PASSWORD")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-app.config['SQLALCHEMY_DATABASE_URI'] = (
-    f"postgresql+psycopg2://postgres@db.qoohwyaajiapqyjvotms.supabase.co:5432/postgres"
-)
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {"connect_args": {"password": DB_PASSWORD, "sslmode": "require"}}
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -72,6 +69,17 @@ class Envio(db.Model):
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(Usuario, int(user_id))
+
+# ==============================
+# ROTA INICIAL (CORRIGE 404)
+# ==============================
+@app.route("/")
+def home():
+    if current_user.is_authenticated:
+        if current_user.username == "admin":
+            return redirect(url_for("admin_dashboard"))
+        return redirect(url_for("meus_envios"))
+    return redirect(url_for("login"))
 
 # ==============================
 # ROTAS LOGIN
@@ -124,7 +132,7 @@ def cadastrar_motorista():
 
         novo_motorista = Usuario(
             username=username,
-            password=generate_password_hash(password, method="pbkdf2:sha256")
+            password=generate_password_hash(password)
         )
         db.session.add(novo_motorista)
         db.session.commit()
@@ -154,7 +162,11 @@ def novo_envio():
         # FOTO CANHOTO
         foto_canhoto = request.files['foto_canhoto']
         nome_canhoto = f"{uuid.uuid4()}_{secure_filename(foto_canhoto.filename)}"
-        supabase.storage.from_("entregas").upload(nome_canhoto, foto_canhoto.read(), {"content-type": foto_canhoto.content_type})
+        supabase.storage.from_("entregas").upload(
+            nome_canhoto,
+            foto_canhoto.read(),
+            {"content-type": foto_canhoto.content_type}
+        )
         url_canhoto = supabase.storage.from_("entregas").get_public_url(nome_canhoto)
 
         # FOTO DEVOLUÇÃO
@@ -162,7 +174,11 @@ def novo_envio():
         if teve_devolucao == "Sim":
             foto_devolucao = request.files['foto_devolucao']
             nome_devolucao = f"{uuid.uuid4()}_{secure_filename(foto_devolucao.filename)}"
-            supabase.storage.from_("entregas").upload(nome_devolucao, foto_devolucao.read(), {"content-type": foto_devolucao.content_type})
+            supabase.storage.from_("entregas").upload(
+                nome_devolucao,
+                foto_devolucao.read(),
+                {"content-type": foto_devolucao.content_type}
+            )
             url_devolucao = supabase.storage.from_("entregas").get_public_url(nome_devolucao)
 
         # FOTO DESCARGA
@@ -170,7 +186,11 @@ def novo_envio():
         if teve_descarga == "Sim":
             foto_descarga = request.files['foto_descarga']
             nome_descarga = f"{uuid.uuid4()}_{secure_filename(foto_descarga.filename)}"
-            supabase.storage.from_("entregas").upload(nome_descarga, foto_descarga.read(), {"content-type": foto_descarga.content_type})
+            supabase.storage.from_("entregas").upload(
+                nome_descarga,
+                foto_descarga.read(),
+                {"content-type": foto_descarga.content_type}
+            )
             url_descarga = supabase.storage.from_("entregas").get_public_url(nome_descarga)
 
         envio = Envio(
@@ -183,8 +203,10 @@ def novo_envio():
             teve_descarga=teve_descarga,
             foto_descarga=url_descarga
         )
+
         db.session.add(envio)
         db.session.commit()
+
         return redirect(url_for('meus_envios'))
 
     return render_template("novo_envio.html")
@@ -194,4 +216,3 @@ def novo_envio():
 # ==============================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
-
