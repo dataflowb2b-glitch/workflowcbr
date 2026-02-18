@@ -168,6 +168,8 @@ def meus_envios():
 
 @app.route("/novo_envio", methods=["GET", "POST"])
 @login_required
+print("FORM:", request.form)
+print("FILES:", request.files)
 def novo_envio():
     if request.method == "POST":
         motorista = current_user.username
