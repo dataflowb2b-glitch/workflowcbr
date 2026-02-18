@@ -1,8 +1,8 @@
-Flask
-Flask-Login
-Flask-SQLAlchemy
-supabase
-psycopg2-binary
-Werkzeug
-python-dotenv
-gunicorn
+Flask>=3.1.0,<4.0
+Flask-Login>=0.6.3,<0.7
+Flask-SQLAlchemy>=3.1.1,<4.0
+psycopg2-binary>=2.9.11,<3.0
+supabase>=2.28.0,<3.0
+Werkzeug>=3.1.5,<4.0
+python-dotenv>=1.2.1,<2.0
+gunicorn>=25.1.0,<26.0
