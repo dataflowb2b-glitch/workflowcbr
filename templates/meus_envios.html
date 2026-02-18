@@ -16,16 +16,22 @@
             font-weight: 600;
         }
 
-        .card {
-            border-radius: 12px;
+        .card-envio {
+            border-radius: 14px;
+            border: none;
         }
 
         .btn {
             border-radius: 10px;
         }
 
-        .table td, .table th {
-            vertical-align: middle;
+        .envio-label {
+            font-size: 13px;
+            color: #6c757d;
+        }
+
+        .envio-value {
+            font-weight: 500;
         }
     </style>
 </head>
@@ -41,73 +47,102 @@
         </a>
     </div>
 
-    <div class="card p-3 shadow-sm">
+    <!-- ================= DESKTOP TABLE ================= -->
+    <div class="d-none d-md-block">
+        <div class="card p-3 shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-striped align-middle">
 
-        <div class="table-responsive">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Cliente</th>
+                            <th>NF</th>
+                            <th>Canhoto</th>
+                            <th>Devolução</th>
+                            <th>Descarga</th>
+                        </tr>
+                    </thead>
 
-            <table class="table table-striped align-middle">
+                    <tbody>
+                        {% for envio in envios %}
+                        <tr>
+                            <td>{{ envio.id }}</td>
+                            <td>{{ envio.cliente }}</td>
+                            <td>{{ envio.numero_nf }}</td>
 
-                <thead class="table-light">
-                    <tr>
-                        <th>ID</th>
-                        <th>Cliente</th>
-                        <th>NF</th>
-                        <th>Canhoto</th>
-                        <th>Devolução</th>
-                        <th>Descarga</th>
-                    </tr>
-                </thead>
+                            <td>
+                                {% if envio.foto_canhoto %}
+                                    <a href="{{ envio.foto_canhoto }}" target="_blank"
+                                       class="btn btn-sm btn-primary">Ver</a>
+                                {% else %}-{% endif %}
+                            </td>
 
-                <tbody>
-                    {% for envio in envios %}
-                    <tr>
-                        <td>{{ envio.id }}</td>
-                        <td>{{ envio.cliente }}</td>
-                        <td>{{ envio.numero_nf }}</td>
+                            <td>
+                                {% if envio.foto_devolucao %}
+                                    <a href="{{ envio.foto_devolucao }}" target="_blank"
+                                       class="btn btn-sm btn-warning">Ver</a>
+                                {% else %}-{% endif %}
+                            </td>
 
-                        <!-- CANHOTO -->
-                        <td>
-                            {% if envio.foto_canhoto %}
-                                <a href="{{ envio.foto_canhoto }}" target="_blank"
-                                   class="btn btn-sm btn-primary">
-                                   Ver
-                                </a>
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
+                            <td>
+                                {% if envio.foto_descarga %}
+                                    <a href="{{ envio.foto_descarga }}" target="_blank"
+                                       class="btn btn-sm btn-info">Ver</a>
+                                {% else %}-{% endif %}
+                            </td>
 
-                        <!-- DEVOLUÇÃO -->
-                        <td>
-                            {% if envio.foto_devolucao %}
-                                <a href="{{ envio.foto_devolucao }}" target="_blank"
-                                   class="btn btn-sm btn-warning">
-                                   Ver
-                                </a>
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
 
-                        <!-- DESCARGA -->
-                        <td>
-                            {% if envio.foto_descarga %}
-                                <a href="{{ envio.foto_descarga }}" target="_blank"
-                                   class="btn btn-sm btn-info">
-                                   Ver
-                                </a>
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
+                </table>
+            </div>
+        </div>
+    </div>
 
-                    </tr>
-                    {% endfor %}
-                </tbody>
+    <!-- ================= MOBILE CARDS ================= -->
+    <div class="d-md-none">
 
-            </table>
+        {% for envio in envios %}
+        <div class="card card-envio shadow-sm mb-3 p-3">
+
+            <div class="mb-2">
+                <div class="envio-label">ID</div>
+                <div class="envio-value">#{{ envio.id }}</div>
+            </div>
+
+            <div class="mb-2">
+                <div class="envio-label">Cliente</div>
+                <div class="envio-value">{{ envio.cliente }}</div>
+            </div>
+
+            <div class="mb-3">
+                <div class="envio-label">NF</div>
+                <div class="envio-value">{{ envio.numero_nf }}</div>
+            </div>
+
+            <div class="d-grid gap-2">
+
+                {% if envio.foto_canhoto %}
+                <a href="{{ envio.foto_canhoto }}" target="_blank"
+                   class="btn btn-primary btn-sm">📄 Ver Canhoto</a>
+                {% endif %}
+
+                {% if envio.foto_devolucao %}
+                <a href="{{ envio.foto_devolucao }}" target="_blank"
+                   class="btn btn-warning btn-sm">↩ Ver Devolução</a>
+                {% endif %}
+
+                {% if envio.foto_descarga %}
+                <a href="{{ envio.foto_descarga }}" target="_blank"
+                   class="btn btn-info btn-sm">📦 Ver Descarga</a>
+                {% endif %}
+
+            </div>
 
         </div>
+        {% endfor %}
 
     </div>
 
