@@ -37,10 +37,10 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # ==============================
 # DATABASE CONFIG
 # ==============================
-DB_PASSWORD = os.getenv("DB_PASSWORD", "Flow2026Supabase")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
 
 app.config['SQLALCHEMY_DATABASE_URI'] = (
-    f"postgresql+psycopg2://postgres@db.qoohwyaajiapqyjvotms.supabase.co:6543/postgres"
+    f"postgresql+psycopg2://postgres@db.qoohwyaajiapqyjvotms.supabase.co:5432/postgres"
 )
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {"connect_args": {"password": DB_PASSWORD, "sslmode": "require"}}
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
