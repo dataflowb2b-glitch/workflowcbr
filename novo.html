@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Novo Envio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-4">
+    <h2>Novo Envio</h2>
+    <form method="POST" action="{{ url_for('novo') }}" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="motorista" class="form-label">Motorista</label>
+            <input type="text" class="form-control" id="motorista" name="motorista" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="cliente" class="form-label">Cliente</label>
+            <input type="text" class="form-control" id="cliente" name="cliente" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="numero_nf" class="form-label">Número NF</label>
+            <input type="text" class="form-control" id="numero_nf" name="numero_nf" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="foto_canhoto" class="form-label">Foto do Canhoto</label>
+            <input type="file" class="form-control" id="foto_canhoto" name="foto_canhoto" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="teve_devolucao" class="form-label">Teve Devolução?</label>
+            <select class="form-select" id="teve_devolucao" name="teve_devolucao" onchange="toggleDevolucao(this.value)">
+                <option value="Não" selected>Não</option>
+                <option value="Sim">Sim</option>
+            </select>
+        </div>
+
+        <div class="mb-3" id="foto_devolucao_div" style="display:none;">
+            <label for="foto_devolucao" class="form-label">Foto da Devolução</label>
+            <input type="file" class="form-control" id="foto_devolucao" name="foto_devolucao">
+        </div>
+
+        <div class="mb-3">
+            <label for="teve_descarga" class="form-label">Teve Descarga?</label>
+            <select class="form-select" id="teve_descarga" name="teve_descarga" onchange="toggleDescarga(this.value)">
+                <option value="Não" selected>Não</option>
+                <option value="Sim">Sim</option>
+            </select>
+        </div>
+
+        <div class="mb-3" id="foto_descarga_div" style="display:none;">
+            <label for="foto_descarga" class="form-label">Foto da Descarga</label>
+            <input type="file" class="form-control" id="foto_descarga" name="foto_descarga">
+        </div>
+
+        <button type="submit" class="btn btn-success">Salvar Envio</button>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+
+<script>
+    function toggleDevolucao(value) {
+        document.getElementById('foto_devolucao_div').style.display = value === 'Sim' ? 'block' : 'none';
+    }
+
+    function toggleDescarga(value) {
+        document.getElementById('foto_descarga_div').style.display = value === 'Sim' ? 'block' : 'none';
+    }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
