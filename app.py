@@ -243,17 +243,30 @@ def meus_envios():
 @login_required
 def novo_envio():
     if request.method == "POST":
+
         motorista = current_user.username
         cliente = request.form["cliente"]
         numero_nf = request.form["numero_nf"]
         teve_devolucao = request.form["teve_devolucao"]
-        tipo_devolucao = request.form.get("tipo_devolucao")  # pega a nova info
         teve_descarga = request.form["teve_descarga"]
+
+        # 🔐 REGRA DE NEGÓCIO DEVOLUÇÃO
+        if teve_devolucao == "Sim":
+            tipo_devolucao = request.form.get("tipo_devolucao")
+
+            if tipo_devolucao not in ["Falta", "Avaria"]:
+                return "Tipo de devolução inválido"
+        else:
+            tipo_devolucao = "Sem devolução"
 
         # FOTO CANHOTO
         foto_canhoto = request.files["foto_canhoto"]
         nome_canhoto = f"{uuid.uuid4()}_{secure_filename(foto_canhoto.filename)}"
-        supabase.storage.from_("entregas").upload(nome_canhoto, foto_canhoto.read(), {"content-type": foto_canhoto.content_type})
+        supabase.storage.from_("entregas").upload(
+            nome_canhoto,
+            foto_canhoto.read(),
+            {"content-type": foto_canhoto.content_type}
+        )
         url_canhoto = supabase.storage.from_("entregas").get_public_url(nome_canhoto)
 
         # FOTO DEVOLUÇÃO
@@ -262,7 +275,11 @@ def novo_envio():
             foto_devolucao = request.files.get("foto_devolucao")
             if foto_devolucao and foto_devolucao.filename != "":
                 nome_dev = f"{uuid.uuid4()}_{secure_filename(foto_devolucao.filename)}"
-                supabase.storage.from_("entregas").upload(nome_dev, foto_devolucao.read(), {"content-type": foto_devolucao.content_type})
+                supabase.storage.from_("entregas").upload(
+                    nome_dev,
+                    foto_devolucao.read(),
+                    {"content-type": foto_devolucao.content_type}
+                )
                 url_devolucao = supabase.storage.from_("entregas").get_public_url(nome_dev)
 
         # FOTO DESCARGA
@@ -271,17 +288,20 @@ def novo_envio():
             foto_descarga = request.files.get("foto_descarga")
             if foto_descarga and foto_descarga.filename != "":
                 nome_desc = f"{uuid.uuid4()}_{secure_filename(foto_descarga.filename)}"
-                supabase.storage.from_("entregas").upload(nome_desc, foto_descarga.read(), {"content-type": foto_descarga.content_type})
+                supabase.storage.from_("entregas").upload(
+                    nome_desc,
+                    foto_descarga.read(),
+                    {"content-type": foto_descarga.content_type}
+                )
                 url_descarga = supabase.storage.from_("entregas").get_public_url(nome_desc)
 
-        # SALVAR NO BANCO
         envio = Envio(
             motorista=motorista,
             cliente=cliente,
             numero_nf=numero_nf,
             foto_canhoto=url_canhoto,
             teve_devolucao=teve_devolucao,
-            tipo_devolucao=tipo_devolucao,  # salva no banco
+            tipo_devolucao=tipo_devolucao,
             foto_devolucao=url_devolucao,
             teve_descarga=teve_descarga,
             foto_descarga=url_descarga
@@ -291,6 +311,8 @@ def novo_envio():
         db.session.commit()
 
         return redirect(url_for('sucesso_envio'))
+
+    return render_template("novo_envio.html")
 
     return render_template("novo_envio.html")
 # ==============================
