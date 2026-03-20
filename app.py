@@ -328,8 +328,7 @@ if request.method == "POST":
         except Exception as e:
             print("ERRO:", str(e))  # aparece no log do Render
             return f"Erro interno: {str(e)}"
-
-    return render_template("novo_envio.html")
+return render_template("novo_envio.html")
 # ==============================
 # START APP
 # ==============================
