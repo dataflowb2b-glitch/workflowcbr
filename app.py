@@ -327,7 +327,7 @@ if request.method == "POST":
             return redirect(url_for('sucesso_envio'))
         except Exception as e:
             print("ERRO:", str(e))  # aparece no log do Render
-return f"Erro interno: {str(e)}"
+            return f"Erro interno: {str(e)}"
 return render_template("novo_envio.html")
 # ==============================
 # START APP
