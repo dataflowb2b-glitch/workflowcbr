@@ -179,18 +179,13 @@ def cadastrar_motorista():
 @app.route('/excluir_motorista/<int:id>', methods=['POST'])
 @login_required
 def excluir_motorista(id):
-
     if current_user.username != "admin":
         return redirect(url_for('meus_envios'))
-
     motorista = Usuario.query.get_or_404(id)
-
     if motorista.username == "admin":
         return "Não é permitido excluir o admin."
-
     db.session.delete(motorista)
     db.session.commit()
-
     return redirect(url_for('cadastrar_motorista'))
 
 # ==============================
