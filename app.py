@@ -242,7 +242,7 @@ def meus_envios():
 @app.route("/novo_envio", methods=["GET", "POST"])
 @login_required
 def novo_envio():
-if request.method == "POST":
+ if request.method == "POST":
     try:
             motorista = current_user.username
             cliente = request.form.get("cliente")
