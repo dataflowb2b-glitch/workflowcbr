@@ -69,7 +69,11 @@ class Envio(db.Model):
 # ========Model Veículo========#
 
 # ==============================
-
+# HOME (RAIZ)
+# ==============================
+@app.route("/")
+def home():
+    return redirect(url_for("login"))
 
 # ==============================
 # USER LOADER
