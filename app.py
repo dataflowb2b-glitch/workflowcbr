@@ -17,9 +17,15 @@ app.secret_key = os.getenv("SECRET_KEY", "fallback-secret")
 # ==============================
 # DATABASE CONFIG (SSL)
 # ==============================
+
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
-    raise Exception("DATABASE_URL não configurada!")
+    print("⚠️ DATABASE_URL não configurada")
+else:
+    if "sslmode" not in DATABASE_URL:
+        DATABASE_URL += "?sslmode=require"
+    app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+
 
 if "sslmode" not in DATABASE_URL:
     DATABASE_URL += "?sslmode=require"
@@ -41,11 +47,12 @@ login_manager.login_view = "login"
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
+supabase = None
+
 if not SUPABASE_URL or not SUPABASE_KEY:
-    raise Exception("SUPABASE não configurado!")
-
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
+    print("⚠️ SUPABASE não configurado")
+else:
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # ==============================
 # MODELS
 # ==============================
