@@ -67,10 +67,11 @@ class Envio(db.Model):
     foto_descarga = db.Column(db.String(300))
     data_envio = db.Column(db.DateTime, default=datetime.utcnow)
 # ========Model Veículo========#
-
+# HOME (RAIZ)
 # ==============================
-
-
+@app.route("/")
+def home():
+    return redirect(url_for("login"))
 # ==============================
 # USER LOADER
 # ==============================
@@ -179,18 +180,13 @@ def cadastrar_motorista():
 @app.route('/excluir_motorista/<int:id>', methods=['POST'])
 @login_required
 def excluir_motorista(id):
-
     if current_user.username != "admin":
         return redirect(url_for('meus_envios'))
-
     motorista = Usuario.query.get_or_404(id)
-
     if motorista.username == "admin":
         return "Não é permitido excluir o admin."
-
     db.session.delete(motorista)
     db.session.commit()
-
     return redirect(url_for('cadastrar_motorista'))
 
 # ==============================
@@ -242,79 +238,93 @@ def meus_envios():
 @app.route("/novo_envio", methods=["GET", "POST"])
 @login_required
 def novo_envio():
-    if request.method == "POST":
+ if request.method == "POST":
+    try:
+            motorista = current_user.username
+            cliente = request.form.get("cliente")
+            numero_nf = request.form.get("numero_nf")
+            teve_devolucao = request.form.get("teve_devolucao")
+            teve_descarga = request.form.get("teve_descarga")
+        
+            # ==============================
+            # REGRA DEVOLUÇÃO
+            # ==============================
+            if teve_devolucao == "Sim":
+                tipo_devolucao = request.form.get("tipo_devolucao")
+                if tipo_devolucao not in ["Falta", "Avaria"]:
+                    return "Tipo de devolução inválido"
+            else:
+                tipo_devolucao = "Sem devolução"
 
-        motorista = current_user.username
-        cliente = request.form["cliente"]
-        numero_nf = request.form["numero_nf"]
-        teve_devolucao = request.form["teve_devolucao"]
-        teve_descarga = request.form["teve_descarga"]
+            # ==============================
+            # FOTO CANHOTO (SEGURA)
+            # ==============================
+            foto_canhoto = request.files.get("foto_canhoto")
+            if not foto_canhoto or foto_canhoto.filename == "":
+                return "Foto do canhoto é obrigatória"
+            nome_canhoto = f"{uuid.uuid4()}_{secure_filename(foto_canhoto.filename)}"
+            supabase.storage.from_("entregas").upload(
+                nome_canhoto,
+                foto_canhoto.read(),
+                {"content-type": foto_canhoto.content_type}
+            )
+            url_canhoto = supabase.storage.from_("entregas").get_public_url(nome_canhoto)
 
-        # 🔐 REGRA DE NEGÓCIO DEVOLUÇÃO
-        if teve_devolucao == "Sim":
-            tipo_devolucao = request.form.get("tipo_devolucao")
+            # ==============================
+            # INICIALIZA
+            # ==============================
+            url_devolucao = None
+            url_descarga = None
 
-            if tipo_devolucao not in ["Falta", "Avaria"]:
-                return "Tipo de devolução inválido"
-        else:
-            tipo_devolucao = "Sem devolução"
+            # ==============================
+            # FOTO DEVOLUÇÃO
+            # ==============================
+            if teve_devolucao == "Sim":
+                foto_devolucao = request.files.get("foto_devolucao")
+                if foto_devolucao and foto_devolucao.filename:
+                    nome_dev = f"{uuid.uuid4()}_{secure_filename(foto_devolucao.filename)}"
+                    supabase.storage.from_("entregas").upload(
+                        nome_dev,
+                        foto_devolucao.read(),
+                        {"content-type": foto_devolucao.content_type}
+                    )
+                    url_devolucao = supabase.storage.from_("entregas").get_public_url(nome_dev)
 
-        # FOTO CANHOTO
-        foto_canhoto = request.files["foto_canhoto"]
-        nome_canhoto = f"{uuid.uuid4()}_{secure_filename(foto_canhoto.filename)}"
-        supabase.storage.from_("entregas").upload(
-            nome_canhoto,
-            foto_canhoto.read(),
-            {"content-type": foto_canhoto.content_type}
-        )
-        url_canhoto = supabase.storage.from_("entregas").get_public_url(nome_canhoto)
+            # ==============================
+            # FOTO DESCARGA
+            # ==============================
+            if teve_descarga == "Sim":
+                foto_descarga = request.files.get("foto_descarga")
+                if foto_descarga and foto_descarga.filename:
+                    nome_desc = f"{uuid.uuid4()}_{secure_filename(foto_descarga.filename)}"
+                    supabase.storage.from_("entregas").upload(
+                        nome_desc,
+                        foto_descarga.read(),
+                        {"content-type": foto_descarga.content_type}
+                    )
+                    url_descarga = supabase.storage.from_("entregas").get_public_url(nome_desc)
 
-        # FOTO DEVOLUÇÃO
-        url_devolucao = None
-        if teve_devolucao == "Sim":
-            foto_devolucao = request.files.get("foto_devolucao")
-            if foto_devolucao and foto_devolucao.filename != "":
-                nome_dev = f"{uuid.uuid4()}_{secure_filename(foto_devolucao.filename)}"
-                supabase.storage.from_("entregas").upload(
-                    nome_dev,
-                    foto_devolucao.read(),
-                    {"content-type": foto_devolucao.content_type}
-                )
-                url_devolucao = supabase.storage.from_("entregas").get_public_url(nome_dev)
-
-        # FOTO DESCARGA
-        url_descarga = None
-        if teve_descarga == "Sim":
-            foto_descarga = request.files.get("foto_descarga")
-            if foto_descarga and foto_descarga.filename != "":
-                nome_desc = f"{uuid.uuid4()}_{secure_filename(foto_descarga.filename)}"
-                supabase.storage.from_("entregas").upload(
-                    nome_desc,
-                    foto_descarga.read(),
-                    {"content-type": foto_descarga.content_type}
-                )
-                url_descarga = supabase.storage.from_("entregas").get_public_url(nome_desc)
-
-        envio = Envio(
-            motorista=motorista,
-            cliente=cliente,
-            numero_nf=numero_nf,
-            foto_canhoto=url_canhoto,
-            teve_devolucao=teve_devolucao,
-            tipo_devolucao=tipo_devolucao,
-            foto_devolucao=url_devolucao,
-            teve_descarga=teve_descarga,
-            foto_descarga=url_descarga
-        )
-
-        db.session.add(envio)
-        db.session.commit()
-
-        return redirect(url_for('sucesso_envio'))
-
-    return render_template("novo_envio.html")
-
-    return render_template("novo_envio.html")
+            # ==============================
+            # SALVAR
+            # ==============================
+            envio = Envio(
+                motorista=motorista,
+                cliente=cliente,
+                numero_nf=numero_nf,
+                foto_canhoto=url_canhoto,
+                teve_devolucao=teve_devolucao,
+                tipo_devolucao=tipo_devolucao,
+                foto_devolucao=url_devolucao,
+                teve_descarga=teve_descarga,
+                foto_descarga=url_descarga
+            )
+            db.session.add(envio)
+            db.session.commit()
+            return redirect(url_for('sucesso_envio'))
+    except Exception as e:
+            print("ERRO:", str(e))  # aparece no log do Render
+            return f"Erro interno: {str(e)}"
+ return render_template("novo_envio.html")
 # ==============================
 # START APP
 # ==============================
