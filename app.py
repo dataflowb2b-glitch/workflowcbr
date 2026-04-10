@@ -14,24 +14,23 @@ from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "fallback-secret")
 
-# ==============================
-# DATABASE CONFIG (SSL)
-# ==============================
+app.config['PROPAGATE_EXCEPTIONS'] = True
+app.debug = True
 
+# ==============================
+# DATABASE CONFIG
+# ==============================
 DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    print("⚠️ DATABASE_URL não configurada")
-else:
-    if "sslmode" not in DATABASE_URL:
-        DATABASE_URL += "?sslmode=require"
-    app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL não configurada!")
 
 if "sslmode" not in DATABASE_URL:
     DATABASE_URL += "?sslmode=require"
 
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
 db = SQLAlchemy(app)
 
 # ==============================
@@ -47,12 +46,12 @@ login_manager.login_view = "login"
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
-supabase = None
-
 if not SUPABASE_URL or not SUPABASE_KEY:
     print("⚠️ SUPABASE não configurado")
+    supabase = None
 else:
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
 # ==============================
 # MODELS
 # ==============================
@@ -73,12 +72,14 @@ class Envio(db.Model):
     teve_descarga = db.Column(db.String(10))
     foto_descarga = db.Column(db.String(300))
     data_envio = db.Column(db.DateTime, default=datetime.utcnow)
-# ========Model Veículo========#
-# HOME (RAIZ)
+
+# ==============================
+# HOME
 # ==============================
 @app.route("/")
 def home():
     return redirect(url_for("login"))
+
 # ==============================
 # USER LOADER
 # ==============================
@@ -87,20 +88,26 @@ def load_user(user_id):
     return db.session.get(Usuario, int(user_id))
 
 # ==============================
-# ROTAS LOGIN
+# LOGIN
 # ==============================
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+
         user = Usuario.query.filter_by(username=username).first()
+
         if user and check_password_hash(user.password, password):
             login_user(user)
+
             if username == "admin":
                 return redirect(url_for('admin_dashboard'))
+
             return redirect(url_for('meus_envios'))
+
         return "Usuário ou senha inválidos"
+
     return render_template('login.html')
 
 @app.route('/logout')
@@ -110,7 +117,7 @@ def logout():
     return redirect(url_for('login'))
 
 # ==============================
-# ROTAS ADMIN
+# ADMIN DASHBOARD
 # ==============================
 @app.route('/admin')
 @login_required
@@ -135,21 +142,19 @@ def admin_dashboard():
     envios = query.order_by(Envio.id.desc()).all()
     motoristas = Usuario.query.all()
 
-    # 📊 MÉTRICAS
-    total_envios = len(envios)
-    total_devolucoes = len([e for e in envios if e.teve_devolucao == "Sim"])
-    total_descargas = len([e for e in envios if e.teve_descarga == "Sim"])
-    total_motoristas = len(motoristas)
-
     return render_template(
         "dashboard_admin.html",
         motoristas=motoristas,
         envios=envios,
-        total_envios=total_envios,
-        total_devolucoes=total_devolucoes,
-        total_descargas=total_descargas,
-        total_motoristas=total_motoristas
+        total_envios=len(envios),
+        total_devolucoes=len([e for e in envios if e.teve_devolucao == "Sim"]),
+        total_descargas=len([e for e in envios if e.teve_descarga == "Sim"]),
+        total_motoristas=len(motoristas)
     )
+
+# ==============================
+# CADASTRAR MOTORISTA
+# ==============================
 @app.route('/cadastrar_motorista', methods=['GET', 'POST'])
 @login_required
 def cadastrar_motorista():
@@ -164,77 +169,41 @@ def cadastrar_motorista():
         if Usuario.query.filter_by(username=username).first():
             return "Motorista já existe!"
 
-        novo_motorista = Usuario(
+        novo = Usuario(
             username=username,
-            password=generate_password_hash(password, method="pbkdf2:sha256")
+            password=generate_password_hash(password)
         )
-        db.session.add(novo_motorista)
+        db.session.add(novo)
         db.session.commit()
 
-        return redirect(url_for('cadastrar_motorista'))  # 👈 volta para a mesma página
+        return redirect(url_for('cadastrar_motorista'))
 
-    # 👇 BUSCA TODOS OS MOTORISTAS
     motoristas = Usuario.query.filter(Usuario.username != "admin").all()
 
-    return render_template(
-        "cadastrar_motorista.html",
-        motoristas=motoristas
-    )
+    return render_template("cadastrar_motorista.html", motoristas=motoristas)
 
 # ==============================
-# ROTAS EXCLUIR MOTORISTA #
+# EXCLUIR MOTORISTA
 # ==============================
 @app.route('/excluir_motorista/<int:id>', methods=['POST'])
 @login_required
 def excluir_motorista(id):
+
     if current_user.username != "admin":
         return redirect(url_for('meus_envios'))
+
     motorista = Usuario.query.get_or_404(id)
+
     if motorista.username == "admin":
-        return "Não é permitido excluir o admin."
+        return "Não pode excluir admin"
+
     db.session.delete(motorista)
     db.session.commit()
-    return redirect(url_for('cadastrar_motorista'))
-
-# ==============================
-# ROTAS EDITAR MOTORISTA #
-# ==============================
-@app.route('/editar_motorista/<int:id>', methods=['POST'])
-@login_required
-def editar_motorista(id):
-
-    if current_user.username != "admin":
-        return redirect(url_for('meus_envios'))
-
-    motorista = Usuario.query.get_or_404(id)
-
-    if motorista.username == "admin":
-        return "Não é permitido editar o admin."
-
-    novo_username = request.form['username']
-    nova_senha = request.form['password']
-
-    motorista.username = novo_username
-
-    if nova_senha:
-        motorista.password = generate_password_hash(
-            nova_senha,
-            method="pbkdf2:sha256"
-        )
-
-    db.session.commit()
 
     return redirect(url_for('cadastrar_motorista'))
 
 # ==============================
-# MOTORISTA DASH
-# ==============================
-@app.route('/sucesso_envio')
-@login_required
-def sucesso_envio():
-    return render_template('sucesso_envio.html')
-# ==============================
-# ROTAS MOTORISTA
+# MEUS ENVIOS
 # ==============================
 @app.route("/meus_envios")
 @login_required
@@ -242,103 +211,67 @@ def meus_envios():
     envios = Envio.query.filter_by(motorista=current_user.username).all()
     return render_template("meus_envios.html", envios=envios)
 
+# ==============================
+# NOVO ENVIO
+# ==============================
 @app.route("/novo_envio", methods=["GET", "POST"])
 @login_required
 def novo_envio():
- if request.method == "POST":
-    try:
+
+    if request.method == "POST":
+
+        if not supabase:
+            return "Erro: Supabase não configurado"
+
+        try:
             motorista = current_user.username
             cliente = request.form.get("cliente")
             numero_nf = request.form.get("numero_nf")
-            teve_devolucao = request.form.get("teve_devolucao")
-            teve_descarga = request.form.get("teve_descarga")
-        
-            # ==============================
-            # REGRA DEVOLUÇÃO
-            # ==============================
-            if teve_devolucao == "Sim":
-                tipo_devolucao = request.form.get("tipo_devolucao")
-                if tipo_devolucao not in ["Falta", "Avaria"]:
-                    return "Tipo de devolução inválido"
-            else:
-                tipo_devolucao = "Sem devolução"
 
-            # ==============================
-            # FOTO CANHOTO (SEGURA)
-            # ==============================
-            foto_canhoto = request.files.get("foto_canhoto")
-            if not foto_canhoto or foto_canhoto.filename == "":
-                return "Foto do canhoto é obrigatória"
-            nome_canhoto = f"{uuid.uuid4()}_{secure_filename(foto_canhoto.filename)}"
+            foto = request.files.get("foto_canhoto")
+
+            if not foto:
+                return "Foto obrigatória"
+
+            nome = f"{uuid.uuid4()}_{secure_filename(foto.filename)}"
+
             supabase.storage.from_("entregas").upload(
-                nome_canhoto,
-                foto_canhoto.read(),
-                {"content-type": foto_canhoto.content_type}
+                nome,
+                foto.read(),
+                {"content-type": foto.content_type}
             )
-            url_canhoto = supabase.storage.from_("entregas").get_public_url(nome_canhoto)
 
-            # ==============================
-            # INICIALIZA
-            # ==============================
-            url_devolucao = None
-            url_descarga = None
+            url = supabase.storage.from_("entregas").get_public_url(nome)
 
-            # ==============================
-            # FOTO DEVOLUÇÃO
-            # ==============================
-            if teve_devolucao == "Sim":
-                foto_devolucao = request.files.get("foto_devolucao")
-                if foto_devolucao and foto_devolucao.filename:
-                    nome_dev = f"{uuid.uuid4()}_{secure_filename(foto_devolucao.filename)}"
-                    supabase.storage.from_("entregas").upload(
-                        nome_dev,
-                        foto_devolucao.read(),
-                        {"content-type": foto_devolucao.content_type}
-                    )
-                    url_devolucao = supabase.storage.from_("entregas").get_public_url(nome_dev)
-
-            # ==============================
-            # FOTO DESCARGA
-            # ==============================
-            if teve_descarga == "Sim":
-                foto_descarga = request.files.get("foto_descarga")
-                if foto_descarga and foto_descarga.filename:
-                    nome_desc = f"{uuid.uuid4()}_{secure_filename(foto_descarga.filename)}"
-                    supabase.storage.from_("entregas").upload(
-                        nome_desc,
-                        foto_descarga.read(),
-                        {"content-type": foto_descarga.content_type}
-                    )
-                    url_descarga = supabase.storage.from_("entregas").get_public_url(nome_desc)
-
-            # ==============================
-            # SALVAR
-            # ==============================
             envio = Envio(
                 motorista=motorista,
                 cliente=cliente,
                 numero_nf=numero_nf,
-                foto_canhoto=url_canhoto,
-                teve_devolucao=teve_devolucao,
-                tipo_devolucao=tipo_devolucao,
-                foto_devolucao=url_devolucao,
-                teve_descarga=teve_descarga,
-                foto_descarga=url_descarga
+                foto_canhoto=url
             )
+
             db.session.add(envio)
             db.session.commit()
-            return redirect(url_for('sucesso_envio'))
-    except Exception as e:
-            print("ERRO:", str(e))  # aparece no log do Render
+
+            return redirect(url_for("sucesso_envio"))
+
+        except Exception as e:
+            print("ERRO:", str(e))
             return f"Erro interno: {str(e)}"
- return render_template("novo_envio.html")
+
+    return render_template("novo_envio.html")
+
 # ==============================
-# START APP
+# SUCESSO
+# ==============================
+@app.route('/sucesso_envio')
+@login_required
+def sucesso_envio():
+    return render_template('sucesso_envio.html')
+
+# ==============================
+# START
 # ==============================
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))  # Render precisa dessa variável
+    port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
-
-app = Flask(__name__)
-app.config['PROPAGATE_EXCEPTIONS'] = True
-app.debug = True
