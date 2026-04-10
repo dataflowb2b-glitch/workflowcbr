@@ -338,3 +338,7 @@ def novo_envio():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))  # Render precisa dessa variável
     app.run(host="0.0.0.0", port=port)
+
+app = Flask(__name__)
+app.config['PROPAGATE_EXCEPTIONS'] = True
+app.debug = True
