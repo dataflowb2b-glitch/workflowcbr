@@ -67,13 +67,11 @@ class Envio(db.Model):
     foto_descarga = db.Column(db.String(300))
     data_envio = db.Column(db.DateTime, default=datetime.utcnow)
 # ========Model Veículo========#
-# ==============================
 # HOME (RAIZ)
 # ==============================
 @app.route("/")
 def home():
     return redirect(url_for("login"))
-
 # ==============================
 # USER LOADER
 # ==============================
